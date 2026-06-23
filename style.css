@@ -28,8 +28,10 @@ body{
 h1{margin:0 0 16px 0;font-size:1.4rem}
 .todo-input-section{display:flex;gap:8px;margin-bottom:16px}
 #todo-input{flex:1;padding:10px 12px;border-radius:8px;border:1px solid #e5e7eb;font-size:1rem}
-#add-btn{background:var(--accent);color:#fff;border:none;padding:10px 14px;border-radius:8px;cursor:pointer}
-#add-btn:hover{opacity:0.95}
+#import-input{flex:1;padding:10px 12px;border-radius:8px;border:1px solid #e5e7eb;font-size:1rem}
+#add-btn,#import-btn{background:var(--accent);color:#fff;border:none;padding:10px 14px;border-radius:8px;cursor:pointer}
+#add-btn:hover,#import-btn:hover{opacity:0.95}
+.import-section{display:flex;gap:8px;margin-bottom:16px}
 ul#todo-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
 li.todo-item{
   display:flex;align-items:center;gap:12px;padding:10px;border-radius:8px;border:1px solid #f1f5f9;
