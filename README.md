@@ -12,7 +12,18 @@
 ## Apps Script 後端
 
 - `Code.gs` 會讀取 `sheetId` 參數並回傳 JSON 值。
-- 回傳資料格式為 `values` 二維陣列，可供 `script.js` 解析成待辦事項。
+- `doPost()` 可接收 `todos` 陣列並將清單儲存到指定 Google 試算表。
+- 若要使用儲存功能，請將 Apps Script 部署為網頁應用程式（`exec` URL），並在 `save-url-input` 中貼上該部署網址。
+
+## 功能說明
+
+1. 前端網頁效果：
+   - `index.html` 已新增 `API URL` 與 `儲存到試算表` 輸入區塊。
+2. 呼叫 API 自動填入資料：
+   - 前端可透過 `api-input` 貼上 JSON 陣列 API，並自動匯入 `title` / `text` / `name` 欄位。
+3. 系統資料存入 Google 試算表：
+   - 前端 `saveToAppsScript()` 會把目前 `todos` 用 POST 傳給 Apps Script deploy URL。
+   - `Code.gs` 的 `doPost()` 會把資料寫入試算表第一、二欄。
 
 ## 範例
 

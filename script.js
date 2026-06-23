@@ -131,11 +131,49 @@ function normalizeRow(row){
     return {text, done}
   }
 
+  if (row.title || row.text || row.name){
+    return {
+      text: String(row.title || row.text || row.name || '').trim(),
+      done: !!row.done
+    }
+  }
+
   const textCell = row.c ? row.c[0] : null
   const doneCell = row.c ? row.c[1] : null
   const text = textCell && textCell.v ? String(textCell.v).trim() : String(textCell || '').trim()
   const done = doneCell && doneCell.v != null ? String(doneCell.v).toLowerCase() !== 'false' && String(doneCell.v) !== '0' : false
   return {text, done}
+}
+
+async function loadFromApi(url){
+  const response = await fetch(url)
+  if(!response.ok) throw new Error(`API 讀取失敗：${response.status}`)
+  const data = await response.json()
+  if (Array.isArray(data)) return data
+  if (Array.isArray(data.data)) return data.data
+  if (Array.isArray(data.results)) return data.results
+  throw new Error('API 回傳內容必須為 JSON 陣列或包含 data/results 陣列')
+}
+
+async function saveToAppsScript(deployUrl){
+  let url = deployUrl.trim()
+  let sheetId = null
+  if(!/sheetId=/.test(url)){
+    const sheetSource = prompt('請輸入要儲存到的 Google 試算表 ID 或完整網址')
+    sheetId = parseSheetId(sheetSource)
+    if(!sheetId) throw new Error('未輸入有效的試算表 ID 或網址。')
+    url = buildAppScriptUrl(url, sheetId)
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ todos })
+  })
+  if(!response.ok) throw new Error(`儲存失敗：${response.status}`)
+  const data = await response.json()
+  if(data.error) throw new Error(data.error)
+  return data
 }
 
 async function importFromGoogleSheet(value){
@@ -238,4 +276,35 @@ document.addEventListener('DOMContentLoaded', ()=>{
       importInput.value = ''
     }
   })
-})
+
+    const apiInput = document.getElementById('api-input')
+    const apiBtn = document.getElementById('api-btn')
+    const saveUrlInput = document.getElementById('save-url-input')
+    const saveBtn = document.getElementById('save-btn')
+
+    apiBtn.addEventListener('click', async ()=>{
+      try{
+        const data = await loadFromApi(apiInput.value)
+        const imported = data.map(normalizeRow).filter(row => row.text)
+        if(imported.length === 0){
+          alert('API 回傳資料中沒有可匯入的待辦文字。')
+          return
+        }
+        imported.forEach(({text, done}) => todos.push({id: Date.now() + Math.random(), text, done}))
+        saveTodos(); renderTodos()
+        alert(`已從 API 匯入 ${imported.length} 筆資料。`)
+      }catch(err){
+        console.error(err)
+        alert(err.message || 'API 匯入失敗。')
+      }
+    })
+
+    saveBtn.addEventListener('click', async ()=>{
+      try{
+        await saveToAppsScript(saveUrlInput.value)
+        alert('已將目前待辦清單儲存到 Google 試算表。')
+      }catch(err){
+        console.error(err)
+        alert(err.message || '儲存失敗。')
+      }
+    })

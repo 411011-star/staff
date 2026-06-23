@@ -15,9 +15,31 @@
             <button id="add-btn">新增</button>
         </div>
 
-        <div class="import-section">
-            <input type="text" id="import-input" placeholder="輸入 Google 試算表 ID、網址或 Apps Script URL">
-            <button id="import-btn">匯入試算表</button>
+        <div class="action-row">
+            <label for="import-input">匯入 Google 試算表 / Apps Script</label>
+            <div class="import-section">
+                <input type="text" id="import-input" placeholder="輸入 Google 試算表 ID、網址或 Apps Script URL">
+                <button type="button" id="import-btn">匯入試算表</button>
+            </div>
+            <p class="import-hint">可直接貼上 Apps Script 部署網址，若未帶 sheetId 會再提示輸入 Google 試算表 ID。</p>
+        </div>
+
+        <div class="action-row">
+            <label for="api-input">從外部 API 載入待辦</label>
+            <div class="api-section">
+                <input type="text" id="api-input" placeholder="輸入 API URL（回傳 JSON 陣列）">
+                <button type="button" id="api-btn">從 API 載入</button>
+            </div>
+            <p class="import-hint">API 來源回傳陣列時，會自動將 title/text/name 欄位轉成待辦項目。</p>
+        </div>
+
+        <div class="action-row">
+            <label for="save-url-input">儲存目前清單到 Google 試算表</label>
+            <div class="save-section">
+                <input type="text" id="save-url-input" placeholder="輸入 Apps Script 部署網址，保存資料到試算表">
+                <button type="button" id="save-btn">儲存到 Google 試算表</button>
+            </div>
+            <p class="save-hint">按下儲存後，會把目前 todo 清單寫入 Google 試算表。</p>
         </div>
 
         <ul id="todo-list">
