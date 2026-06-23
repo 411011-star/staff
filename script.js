@@ -92,6 +92,18 @@ function parseSheetId(value){
   return idMatch ? trimmed : null
 }
 
+function isAppsScriptUrl(value){
+  return /script\.google\.com\/macros\/s\//.test(value)
+}
+
+function buildAppScriptUrl(baseUrl, sheetId){
+  const url = new URL(baseUrl)
+  if(!url.searchParams.has('sheetId')){
+    url.searchParams.set('sheetId', sheetId)
+  }
+  return url.toString()
+}
+
 async function fetchGoogleSheetValues(sheetId){
   const endpoint = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`
   const response = await fetch(endpoint)
@@ -103,29 +115,83 @@ async function fetchGoogleSheetValues(sheetId){
   return data.table || null
 }
 
+async function fetchAppScriptValues(deployUrl){
+  const response = await fetch(deployUrl)
+  if(!response.ok) throw new Error('無法取得 Apps Script 資料')
+  const data = await response.json()
+  if (data.error) throw new Error(data.error)
+  return data
+}
+
 function normalizeRow(row){
-  const textCell = row.c[0]
-  const doneCell = row.c[1]
-  const text = textCell && textCell.v ? String(textCell.v).trim() : ''
-  const done = doneCell && doneCell.v != null && String(doneCell.v).toLowerCase() !== 'false' && String(doneCell.v) !== '0'
+  if (!row) return {text:'', done:false}
+  if (Array.isArray(row)){
+    const text = String(row[0] || '').trim()
+    const done = String(row[1] || '').toLowerCase() !== 'false' && String(row[1] || '') !== '0'
+    return {text, done}
+  }
+
+  const textCell = row.c ? row.c[0] : null
+  const doneCell = row.c ? row.c[1] : null
+  const text = textCell && textCell.v ? String(textCell.v).trim() : String(textCell || '').trim()
+  const done = doneCell && doneCell.v != null ? String(doneCell.v).toLowerCase() !== 'false' && String(doneCell.v) !== '0' : false
   return {text, done}
 }
 
 async function importFromGoogleSheet(value){
-  const sheetId = parseSheetId(value)
-  if(!sheetId){
-    alert('請輸入有效的 Google 試算表 ID 或網址。')
+  const trimmed = value.trim()
+  if(!trimmed){
+    alert('請輸入有效的 Google 試算表 ID、網址，或 Apps Script 部署網址。')
     return
   }
 
   try{
-    const table = await fetchGoogleSheetValues(sheetId)
-    if(!table || !table.rows || table.rows.length === 0){
-      alert('試算表內容為空，請檢查是否公開或有資料。')
-      return
+    let imported = []
+
+    if(isAppsScriptUrl(trimmed)){
+      let deployUrl = trimmed
+      let sheetId = null
+      if(!/sheetId=/.test(deployUrl)){
+        const sheetSource = prompt('請輸入要匯入的 Google 試算表 ID 或完整網址')
+        sheetId = parseSheetId(sheetSource)
+        if(!sheetId){
+          alert('未輸入有效的試算表 ID 或網址。')
+          return
+        }
+        deployUrl = buildAppScriptUrl(deployUrl, sheetId)
+      } else {
+        const url = new URL(deployUrl)
+        sheetId = url.searchParams.get('sheetId')
+      }
+
+      if(!sheetId){
+        alert('無法從 Apps Script 部署網址中解析 sheetId。請確認網址是否正確或手動輸入試算表 ID。')
+        return
+      }
+
+      const data = await fetchAppScriptValues(deployUrl)
+      if(!Array.isArray(data.values) || data.values.length === 0){
+        alert('Apps Script 回傳的試算表資料為空。')
+        return
+      }
+
+      imported = data.values.map(normalizeRow).filter(row => row.text)
+    } else {
+      const sheetId = parseSheetId(trimmed)
+      if(!sheetId){
+        alert('請輸入有效的 Google 試算表 ID 或網址。')
+        return
+      }
+
+      const table = await fetchGoogleSheetValues(sheetId)
+      if(!table || !table.rows || table.rows.length === 0){
+        alert('試算表內容為空，請檢查是否公開或有資料。')
+        return
+      }
+
+      imported = table.rows.map(normalizeRow).filter(row => row.text)
     }
 
-    const imported = table.rows.map(normalizeRow).filter(row => row.text)
     if(imported.length === 0){
       alert('未找到有效的待辦事項文字欄位。請確認試算表第一欄為待辦內容。')
       return
@@ -136,7 +202,7 @@ async function importFromGoogleSheet(value){
     alert(`已匯入 ${imported.length} 筆待辦事項。`)
   }catch(err){
     console.error(err)
-    alert('匯入失敗，請確認試算表是否已公開並可存取。')
+    alert(`匯入失敗：${err.message || '請確認試算表或 Apps Script 部署可存取。'}`)
   }
 }
 
